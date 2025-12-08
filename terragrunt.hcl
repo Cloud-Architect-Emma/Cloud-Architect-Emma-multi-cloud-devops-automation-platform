@@ -23,3 +23,20 @@ provider "aws" {
 }
 EOF
 }
+
+# Add this new block to generate versions.tf with provider version constraints
+generate "versions" {
+  path      = "versions.tf"
+  if_exists = "overwrite"
+  contents  = <<EOF
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"  # Ensures support for elastic_gpu_specifications and elastic_inference_accelerator blocks
+    }
+  }
+  required_version = ">= 1.0"
+}
+EOF
+}
