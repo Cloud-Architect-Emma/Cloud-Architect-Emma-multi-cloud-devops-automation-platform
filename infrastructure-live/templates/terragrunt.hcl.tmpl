@@ -1,0 +1,13 @@
+terraform {
+  source = "../../../modules/${stack.name_suffix}"
+}
+
+include {
+  path = find_in_parent_folders()
+}
+
+inputs = {
+  resource_group_name = "rg-${stack.region}-${stack.env}"
+  location            = "${stack.region}"
+  ${stack.name_suffix}_name = "${stack.name_suffix}-${stack.region}-${stack.env}"
+}
