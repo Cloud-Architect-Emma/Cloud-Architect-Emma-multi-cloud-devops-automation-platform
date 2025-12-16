@@ -1,0 +1,32 @@
+# infra/templates/module-gke.tmpl
+variable "project_id" {}
+variable "region" {}
+variable "cluster_name" {}
+variable "vpc_self_link" {}
+variable "subnet_self_link" {}
+variable "node_size" {}
+variable "node_count" {}
+
+module "gke" {
+  source  = "terraform-google-modules/kubernetes-engine/google//modules/private-cluster"
+  version = "~> 32.0"
+
+  project_id  = var.project_id
+  name        = var.cluster_name
+  region      = var.region
+  network     = var.vpc_self_link
+  subnetwork  = var.subnet_self_link
+
+  enable_private_nodes    = true
+  enable_private_endpoint = false
+
+  node_pools = [
+    {
+      name         = "np-default"
+      machine_type = var.node_size
+      node_count   = var.node_count
+    }
+  ]
+}
+
+output "cluster_name" { value = module.gke.name }

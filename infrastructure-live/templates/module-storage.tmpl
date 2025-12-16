@@ -1,0 +1,11 @@
+# infra/templates/module-storage.tmpl
+variable "bucket_name" {}
+variable "location" {}
+
+resource "google_storage_bucket" "this" {
+  name                        = var.bucket_name
+  location                    = var.location
+  uniform_bucket_level_access = true
+}
+
+output "bucket_name" { value = google_storage_bucket.this.name }

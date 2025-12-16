@@ -1,0 +1,9 @@
+# infra/templates/tf-backend.tmpl
+
+
+terraform {
+  backend "gcs" {
+    bucket = "${backend_bucket}"
+    prefix = "${environment}/${region}/${component}"
+  }
+}

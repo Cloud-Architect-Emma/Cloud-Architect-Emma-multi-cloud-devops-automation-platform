@@ -1,0 +1,12 @@
+# infra/templates/module-artifact-registry.tmpl
+variable "location" {}
+variable "repo_name" {}
+
+resource "google_artifact_registry_repository" "this" {
+  location      = var.location
+  repository_id = var.repo_name
+  format        = "DOCKER"
+  description   = "Container images for ${var.repo_name}"
+}
+
+output "repo_id" { value = google_artifact_registry_repository.this.id }

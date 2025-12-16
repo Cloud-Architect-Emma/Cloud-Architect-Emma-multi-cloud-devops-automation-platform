@@ -183,3 +183,5 @@ coverage.*
 **/.terragrunt-cache/
 
 argocd.exe
+argocd.exe
+argocd.exe

@@ -1,0 +1,39 @@
+---
+- name: Manage GKE cluster and Storage Bucket
+  hosts: localhost
+  tasks:
+    - name: Create GKE cluster
+      google.cloud.gcp_container_cluster:
+        name: my-cluster
+        initial_node_count: 2
+        node_config:
+          disk_size_gb: 50
+        network: default
+        subnetwork: default
+        location: us-central1-a
+        auth_kind: serviceaccount
+        service_account_file: ./key.json
+        project: terraform-multi-cloud-480415
+        state: present
+      register: gke_cluster_result
+
+    - name: Wait for cluster to be ready
+      google.cloud.gcp_container_cluster_info:
+        name: my-cluster
+        location: us-central1-a
+        project: terraform-multi-cloud-480415
+        auth_kind: serviceaccount
+        service_account_file: ./key.json
+      register: cluster_info
+      until: cluster_info.resources[0].status == "RUNNING"
+      retries: 20
+      delay: 30
+
+    - name: Create storage bucket
+      google.cloud.gcp_storage_bucket:
+        name: ansible-text
+        auth_kind: serviceaccount
+        service_account_file: ./key.json
+        project: terraform-multi-cloud-480415
+        state: present
+      register: storage_bucket_result

@@ -1,0 +1,14 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: example-webhook
+webhooks:
+  - name: validate.example.com
+    clientConfig:
+      url: https://your-webhook-endpoint/validate
+      caBundle: <base64-encoded-CA-cert>
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
