@@ -10,7 +10,7 @@ spec:
   ports:
     - name: https
       port: 443
-      targetPort: 2000
+      targetPort: 8080
       protocol: TCP
   selector:
     app.kubernetes.io/name: argocd-server
