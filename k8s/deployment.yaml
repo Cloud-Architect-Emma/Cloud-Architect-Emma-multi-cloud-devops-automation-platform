@@ -10,7 +10,7 @@ spec:
     targetRevision: main
     path: k8s/aws
   destination:
-    server: https://136.119.132.193
+    name: aws-cluster        # 👈 This is the registered cluster name from `argocd cluster add`
     namespace: default
   syncPolicy:
     automated:
