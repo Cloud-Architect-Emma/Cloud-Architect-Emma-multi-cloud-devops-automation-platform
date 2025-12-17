@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-cloud-service
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: multi-cloud-service
+  template:
+    metadata:
+      labels:
+        app: multi-cloud-service
+    spec:
+      containers:
+      - name: multi-cloud-service
+        image: 430118830222.dkr.ecr.us-east-1.amazonaws.com/multi-cloud-service:<tag>
+        ports:
+        - containerPort: 8080
