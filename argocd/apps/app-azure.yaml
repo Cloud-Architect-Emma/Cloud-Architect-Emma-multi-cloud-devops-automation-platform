@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-azure
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Cloud-Architect-Emma/Cloud-Architect-Emma-multi-cloud-devops-automation-platform.git
+    targetRevision: main
+    path: infrastructure-live/azure/k8s
+  destination:
+    name: aks-eastus-dev
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

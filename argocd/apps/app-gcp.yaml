@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-gcp
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Cloud-Architect-Emma/Cloud-Architect-Emma-multi-cloud-devops-automation-platform.git
+    targetRevision: main
+    path: infrastructure-live/gcp/k8s
+  destination:
+    name: gke_terraform-multi-cloud-480415_us-central1_gke-dev
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

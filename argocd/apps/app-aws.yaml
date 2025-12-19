@@ -2,13 +2,13 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: app-aws
-  namespace: argocd   # always in the management cluster
+  namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/Cloud-Architect-Emma/Cloud-Architect-Emma-multi-cloud-devops-automation-platform.git
     targetRevision: main
-    path: k8s/aws     # manifests for AWS workloads
+    path: infrastructure-live/aws/k8s
   destination:
     name: arn:aws:eks:us-east-1:430118830222:cluster/dev-eks
     namespace: default
