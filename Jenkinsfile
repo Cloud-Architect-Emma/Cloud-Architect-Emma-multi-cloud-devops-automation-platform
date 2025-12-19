@@ -1,11 +1,12 @@
 pipeline {
     agent any
-
     environment {
-        AWS_DEFAULT_REGION = 'us-east-1'
-        ARGOCD_SERVER = 'https://argocd.example.com'
+        // Global environment variables if needed
+        DOCKER_IMAGE = "emma/multi-cloud-app"
+        DOCKER_TAG = "latest"
+        ARGOCD_SERVER = "https://argocd.example.com"
+        SONARQUBE_SERVER = "http://sonarqube.example.com"
     }
-
     stages {
 
         stage('Checkout') {
@@ -22,17 +23,16 @@ pipeline {
 
         stage('Terraform Init & Plan') {
             parallel {
+
                 stage('AWS Terraform') {
                     steps {
                         withCredentials([
                             string(credentialsId: 'access-key', variable: 'AWS_ACCESS_KEY_ID'),
                             string(credentialsId: 'secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
                         ]) {
-                            dir('infrastructure-live/aws') {
-                                sh '''
-                                  terraform init
-                                  terraform plan -out=tfplan
-                                '''
+                            dir('terraform/aws') {
+                                sh 'terraform init'
+                                sh 'terraform plan -out=tfplan'
                             }
                         }
                     }
@@ -41,14 +41,14 @@ pipeline {
                 stage('Azure Terraform') {
                     steps {
                         withCredentials([file(credentialsId: 'azure-credentials.json', variable: 'AZURE_CREDS')]) {
-                            dir('infrastructure-live/azure') {
+                            dir('terraform/azure') {
                                 sh '''
-                                  az login --service-principal --username $(jq -r .clientId < $AZURE_CREDS) \
-                                    --password $(jq -r .clientSecret < $AZURE_CREDS) \
-                                    --tenant $(jq -r .tenantId < $AZURE_CREDS)
-                                  az account set --subscription $(jq -r .subscriptionId < $AZURE_CREDS)
-                                  terraform init
-                                  terraform plan -out=tfplan
+                                    az login --service-principal --username $(jq -r .clientId < $AZURE_CREDS) \
+                                      --password $(jq -r .clientSecret < $AZURE_CREDS) \
+                                      --tenant $(jq -r .tenantId < $AZURE_CREDS)
+                                    az account set --subscription $(jq -r .subscriptionId < $AZURE_CREDS)
+                                    terraform init
+                                    terraform plan -out=tfplan
                                 '''
                             }
                         }
@@ -58,29 +58,77 @@ pipeline {
                 stage('GCP Terraform') {
                     steps {
                         withCredentials([file(credentialsId: 'service-account', variable: 'GCP_KEYFILE')]) {
-                            dir('infrastructure-live/gcp') {
+                            dir('terraform/gcp') {
                                 sh '''
-                                  gcloud auth activate-service-account --key-file=$GCP_KEYFILE
-                                  terraform init
-                                  terraform plan -out=tfplan
+                                    gcloud auth activate-service-account --key-file=$GCP_KEYFILE
+                                    terraform init
+                                    terraform plan -out=tfplan
                                 '''
                             }
                         }
                     }
                 }
+
             }
         }
 
-        stage('Terraform Apply') { ... } // same mapping as above
+        stage('Terraform Apply') {
+            parallel {
+
+                stage('AWS Apply') {
+                    steps {
+                        withCredentials([
+                            string(credentialsId: 'access-key', variable: 'AWS_ACCESS_KEY_ID'),
+                            string(credentialsId: 'secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                        ]) {
+                            dir('terraform/aws') {
+                                sh 'terraform apply -auto-approve tfplan'
+                            }
+                        }
+                    }
+                }
+
+                stage('Azure Apply') {
+                    steps {
+                        withCredentials([file(credentialsId: 'azure-credentials.json', variable: 'AZURE_CREDS')]) {
+                            dir('terraform/azure') {
+                                sh '''
+                                    az login --service-principal --username $(jq -r .clientId < $AZURE_CREDS) \
+                                      --password $(jq -r .clientSecret < $AZURE_CREDS) \
+                                      --tenant $(jq -r .tenantId < $AZURE_CREDS)
+                                    az account set --subscription $(jq -r .subscriptionId < $AZURE_CREDS)
+                                    terraform apply -auto-approve tfplan
+                                '''
+                            }
+                        }
+                    }
+                }
+
+                stage('GCP Apply') {
+                    steps {
+                        withCredentials([file(credentialsId: 'service-account', variable: 'GCP_KEYFILE')]) {
+                            dir('terraform/gcp') {
+                                sh '''
+                                    gcloud auth activate-service-account --key-file=$GCP_KEYFILE
+                                    terraform apply -auto-approve tfplan
+                                '''
+                            }
+                        }
+                    }
+                }
+
+            }
+        }
 
         stage('Build, Scan & Push Image') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
-                        def image = docker.build("multi-cloud-app:${env.BUILD_NUMBER}")
-                        sh "trivy image --severity CRITICAL,HIGH --exit-code 1 ${image.imageName()}"
-                        image.push()
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        docker build -t $DOCKER_IMAGE:$DOCKER_TAG .
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker push $DOCKER_IMAGE:$DOCKER_TAG
+                        trivy image --exit-code 1 $DOCKER_IMAGE:$DOCKER_TAG
+                    '''
                 }
             }
         }
@@ -88,7 +136,12 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'sonarQube-token', usernameVariable: 'SONAR_USER', passwordVariable: 'SONAR_PASS')]) {
-                    sh 'sonar-scanner -Dsonar.login=$SONAR_PASS'
+                    sh '''
+                        sonar-scanner \
+                        -Dsonar.projectKey=multi-cloud-app \
+                        -Dsonar.host.url=$SONARQUBE_SERVER \
+                        -Dsonar.login=$SONAR_PASS
+                    '''
                 }
             }
         }
@@ -97,26 +150,21 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'AgroCD', usernameVariable: 'ARGO_USER', passwordVariable: 'ARGO_PASS')]) {
                     sh '''
-                      argocd login $ARGOCD_SERVER --username $ARGO_USER --password $ARGO_PASS --insecure
-                      for cluster in aws azure gcp; do
-                        argocd app sync app-$cluster --prune --retry
-                      done
+                        argocd login $ARGOCD_SERVER --username $ARGO_USER --password $ARGO_PASS --insecure
+                        argocd app sync multi-cloud-app
                     '''
                 }
             }
         }
+
     }
 
     post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
         failure {
-            withCredentials([usernamePassword(credentialsId: 'AgroCD', usernameVariable: 'ARGO_USER', passwordVariable: 'ARGO_PASS')]) {
-                sh '''
-                  argocd login $ARGOCD_SERVER --username $ARGO_USER --password $ARGO_PASS --insecure
-                  for cluster in aws azure gcp; do
-                    argocd app rollback app-$cluster 1
-                  done
-                '''
-            }
+            echo 'Pipeline failed! Check the logs for details.'
         }
     }
 }
