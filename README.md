@@ -121,7 +121,7 @@ OpenTelemetry traces/logs
 Automated rollback on failed health checks
 
 # Infrastructure Structure (Terragrunt)
-![Infrastructure Structure](infras-img/OIDC%20App.PNG)
+![Infrastructure Structure](infras-img/infras-img.PNG)
 Each environment inherits from a shared Terragrunt module, ensuring DRY, reusable, and consistent infrastructure across all clouds.
 
 # Technologies Used
@@ -183,7 +183,7 @@ This project demonstrates:
 It is designed to showcase architectural thinking, hands‑on engineering, and DevOps leadership.
 
 # GitOps with Argo CD Screenshot
-![GitOps Screenshot](GitOps-img/OIDC%20App.PNG)
+![GitOps Screenshot](GitOps-img/GitOps-img.PNG)
 
 # How to Use This Repository
 - Clone the repo
