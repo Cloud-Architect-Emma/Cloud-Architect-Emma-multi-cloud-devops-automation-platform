@@ -121,7 +121,7 @@ OpenTelemetry traces/logs
 Automated rollback on failed health checks
 
 # Infrastructure Structure (Terragrunt)
-![Infrastructure Structure](infras-img/infras-img.PNG)
+![Infrastructure Structure](Infrastructure Structure/infras-img.PNG)
 Each environment inherits from a shared Terragrunt module, ensuring DRY, reusable, and consistent infrastructure across all clouds.
 
 # Technologies Used
